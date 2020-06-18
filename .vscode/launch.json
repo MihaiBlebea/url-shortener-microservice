@@ -1,0 +1,27 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch",
+            "type": "go",
+            "request": "launch",
+            "port": 8089,
+            "mode": "auto",
+            "program": "${fileDirname}/../application/main.go",
+            "env": {
+                "MYSQL_PASS": "pass",
+                "MYSQL_USER": "admin",
+                "MYSQL_HOST": "127.0.0.1",
+                "MYSQL_PORT": "3308",
+                "MYSQL_DB": "shortener",
+                "PORT": 8089,
+                "REDIS_HOST": "127.0.0.1",
+                "REDIS_PORT": 6380
+            },
+            "args": []
+        }
+    ]
+}

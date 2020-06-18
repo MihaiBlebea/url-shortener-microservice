@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+    app:
+        build: ./application
+        container_name: app
+        ports: 
+            - 8080:8080
+            - 8081:8081
+        environment: 
+            - PORT=8080
+            - MYSQL_USER=admin
+            - MYSQL_PASS=pass
+            - MYSQL_HOST=shortener_mysql_db
+            - MYSQL_PORT=3306
+            - MYSQL_DB=shortener
+            - REDIS_HOST=shortener_redis_db
+            - REDIS_PORT=6379
+        restart: always
+        depends_on:
+            - mysql
+            - redis
+
+    mysql:
+        image: mariadb:latest
+        container_name: shortener_mysql_db
+        volumes:
+            - ./volume/mysql:/var/lib/mysql
+        restart: always
+        ports:
+            - 3308:3306
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_PASSWORD=pass
+            - MYSQL_USER=admin
+            - MYSQL_DATABASE=shortener
+    
+    redis:
+        image: redis:latest
+        container_name: shortener_redis_db
+        restart: always
+        ports:
+            - 6380:6379
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_PASSWORD=pass
+            - MYSQL_USER=admin
+            - MYSQL_DATABASE=shortener
