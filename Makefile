@@ -14,3 +14,9 @@ down:
 
 push:
 	docker-compose push
+
+local:
+	export REDIS_HOST=localhost && \
+	export REDIS_PORT=6380 && \
+	cd application && \
+	go run .

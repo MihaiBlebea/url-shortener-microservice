@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
+	"os/signal"
+	"syscall"
+
+	kitlog "github.com/go-kit/kit/log"
 
 	"github.com/MihaiBlebea/url-shortener/api"
 	"github.com/MihaiBlebea/url-shortener/repository/redis"
@@ -29,6 +34,11 @@ func main() {
 	// 	log.Panic(err)
 	// }
 
+	// Logging
+	var logger kitlog.Logger
+	logger = kitlog.NewLogfmtLogger(os.Stderr)
+
+	// Create the redis client
 	client, err := redis.NewClient(os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
 	if err != nil {
 		log.Panic(err)
@@ -38,34 +48,46 @@ func main() {
 
 	service := shortener.NewRedirectService(repo)
 
-	endpoints := api.MakeEndpoints(service)
-
+	// http server
+	endpoints := api.MakeEndpoints(service, logger)
 	ctx := context.Background()
 	handler := api.NewHTTPServer(ctx, endpoints)
 
-	// http server
-	go func() {
-		http.ListenAndServe(":8080", handler)
-	}()
-
+	// tcp server
 	rpcHandler := api.NewRPC(service)
 
-	// tcp server
 	err = rpc.Register(rpcHandler)
 	if err != nil {
 		log.Fatal("error registering API", err)
 	}
-
 	rpc.HandleHTTP()
 
-	listener, err := net.Listen("tcp", ":8081")
-	if err != nil {
-		log.Fatal("Listener error", err)
-	}
-	log.Printf("serving rpc on port %s", "8081")
-	http.Serve(listener, nil)
+	errs := make(chan error, 2)
 
-	if err != nil {
-		log.Fatal("error serving: ", err)
-	}
+	// http server
+	go func() {
+		fmt.Println("Running http server on port 8080")
+		errs <- http.ListenAndServe(":8080", handler)
+	}()
+
+	go func() {
+		fmt.Println("Running rpc server on port 8081")
+		listener, err := net.Listen("tcp", ":8081")
+		if err != nil {
+			errs <- err
+		}
+
+		err = http.Serve(listener, nil)
+		if err != nil {
+			errs <- err
+		}
+	}()
+
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT)
+		errs <- fmt.Errorf("%s", <-c)
+	}()
+
+	fmt.Printf("Terminated %s", <-errs)
 }
